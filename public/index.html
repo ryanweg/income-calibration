@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Income Calibration — Your Personal Decumulation Analysis</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1304,9 +1304,26 @@ h2 {
 // Find these at: https://supabase.com/dashboard → Project Settings → API
 const SUPABASE_URL = 'https://vqdryjasukjfnuvnwqpp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxZHJ5amFzdWtqZm51dm53cXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODc1MjUsImV4cCI6MjA5MTI2MzUyNX0.32VQD9O4eXPr5hfmd1YlUA_bdJzVmB7enpgqXX6WMVw';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let supabase = null;
+
+if (window.supabase && !SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+  try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('Supabase initialized');
+  } catch (e) {
+    console.warn('Supabase init failed:', e);
+  }
+} else {
+  console.warn('Supabase not configured');
+}
 
 async function saveToSupabase(type, data) {
+  if (!supabase) {
+    console.warn('Skipping save — Supabase not initialized');
+    return false;
+  }
+
   try {
     const { error } = await supabase
       .from('submissions')
@@ -1318,11 +1335,12 @@ async function saveToSupabase(type, data) {
         phone: data.application?.primary?.phone || data.callbackPhone || '',
         data: data
       });
+
     if (error) {
       console.error('Supabase error:', error);
       return false;
     }
-    console.log('Saved to Supabase:', type);
+
     return true;
   } catch (err) {
     console.error('Supabase connection error:', err);
@@ -1370,7 +1388,7 @@ const screenOrder = [
   's61','s62','s65','s64','s66','s67'
 ];
 let currentScreen = 's01';
-const history = [];
+const navHistory = [];
 
 // ============================================
 // HELPERS
@@ -1421,8 +1439,8 @@ document.addEventListener('keydown', function(e) {
 });
 
 function goBack() {
-  if (history.length > 0) {
-    const prev = history.pop();
+  if (navHistory.length > 0) {
+    const prev = navHistory.pop();
     document.querySelectorAll('.screen.active').forEach(s => s.classList.remove('active'));
     const target = $(prev);
     if (target) {
@@ -1435,7 +1453,7 @@ function goBack() {
 }
 
 function goTo(id) {
-  history.push(currentScreen);
+  navHistory.push(currentScreen);
   document.querySelectorAll('.screen.active').forEach(s => s.classList.remove('active'));
   const target = $(id);
   if (target) {
