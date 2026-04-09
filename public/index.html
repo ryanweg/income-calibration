@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Income Calibration — Your Personal Decumulation Analysis</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0f1a;
+  --card-bg: #111827;
+  --card-border: #1e293b;
+  --gold: #c9a962;
+  --gold-dim: rgba(201,169,98,0.15);
+  --gold-glow: rgba(201,169,98,0.3);
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --text-bright: #f8fafc;
+  --danger: #ef4444;
+  --danger-dim: rgba(239,68,68,0.15);
+  --success: #22c55e;
+  --success-dim: rgba(34,197,94,0.15);
+  --radius: 12px;
+  --transition: 0.3s ease;
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Progress Bar */
+.progress-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 4px; background: var(--card-border);
+}
+.progress-fill {
+  height: 100%; background: linear-gradient(90deg, var(--gold), #e8c547);
+  transition: width 0.6s ease;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Container */
+.app-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 24px 24px 40px;
+}
+
+/* Screen */
+.screen {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+.screen.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Phase Label */
+.phase-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--gold);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/* Headings */
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  line-height: 1.3;
+  margin-bottom: 12px;
+}
+h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+/* Body Text */
+.screen-text {
+  font-size: 1.15rem;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.screen-text strong { color: var(--gold); font-weight: 600; }
+.screen-text em { color: var(--text-dim); font-style: italic; }
+
+/* Highlight Box */
+.highlight-box {
+  background: var(--gold-dim);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin: 20px 0;
+}
+.highlight-box.danger {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+}
+.highlight-box.success {
+  background: var(--success-dim);
+  border-color: var(--success);
+}
+
+/* Big Number */
+.big-number {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--gold);
+  text-align: center;
+  margin: 16px 0;
+  animation: countUp 0.6s ease;
+}
+.big-number.danger { color: var(--danger); }
+.big-number.success { color: var(--success); }
+
+/* Buttons */
+.btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 0;
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold), #e8c547);
+  color: #0a0f1a;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--gold-glow); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--card-border);
+}
+.btn-secondary:hover { border-color: var(--text-dim); color: var(--text); }
+
+/* Inputs */
+.input-group {
+  margin-bottom: 20px;
+}
+.input-group label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.input-group input,
+.input-group textarea,
+.input-group select {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 1.05rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  color: var(--text-bright);
+  outline: none;
+  transition: border-color var(--transition);
+  font-family: inherit;
+}
+.input-group input:focus,
+.input-group textarea:focus,
+.input-group select:focus {
+  border-color: var(--gold);
+}
+.input-group textarea { resize: vertical; min-height: 100px; }
+.input-group input::placeholder,
+.input-group textarea::placeholder { color: #475569; }
+
+/* Dollar Input */
+.dollar-input {
+  position: relative;
+}
+.dollar-input::before {
+  content: '$';
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  font-size: 1.05rem;
+  pointer-events: none;
+}
+.dollar-input input { padding-left: 32px; }
+
+/* Slider */
+.slider-container {
+  margin: 24px 0;
+}
+.slider-container input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  background: var(--card-border);
+  border-radius: 4px;
+  outline: none;
+}
+.slider-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 32px; height: 32px;
+  background: var(--gold);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--gold-glow);
+}
+.slider-value {
+  text-align: center;
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--gold);
+  margin: 16px 0;
+}
+
+/* Inline Row */
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Scorecard */
+.scorecard {
+  margin: 20px 0;
+}
+.scorecard-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--card-border);
+  font-size: 1rem;
+}
+.scorecard-item:last-child { border-bottom: none; }
+.scorecard-icon {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 700;
+  flex-shrink: 0;
+}
+.scorecard-icon.fail { background: var(--danger-dim); color: var(--danger); }
+.scorecard-icon.pass { background: var(--success-dim); color: var(--success); }
+
+/* Comparison chart */
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 20px 0;
+}
+.comparison-col {
+  padding: 20px;
+  border-radius: var(--radius);
+  text-align: center;
+}
+.comparison-col.bad { background: var(--danger-dim); border: 1px solid rgba(239,68,68,0.3); }
+.comparison-col.good { background: var(--success-dim); border: 1px solid rgba(34,197,94,0.3); }
+.comparison-col h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.comparison-col .val { font-size: 1.5rem; font-weight: 700; }
+.comparison-col.bad .val { color: var(--danger); }
+.comparison-col.good .val { color: var(--success); }
+
+/* Quote block */
+.quote-block {
+  border-left: 3px solid var(--gold);
+  padding: 12px 20px;
+  margin: 16px 0;
+  font-style: italic;
+  color: var(--text-dim);
+}
+.quote-block .author {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--gold);
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+/* Animated line chart */
+.line-chart {
+  position: relative;
+  height: 200px;
+  margin: 24px 0;
+  overflow: hidden;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+}
+.line-chart svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Checklist */
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+.checklist-item .check {
+  color: var(--success);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Summary table */
+.summary-table {
+  width: 100%;
+  margin: 16px 0;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--card-border);
+  font-size: 0.95rem;
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-row .label { color: var(--text-dim); }
+.summary-row .value { color: var(--text-bright); font-weight: 600; }
+
+/* Footer */
+.screen-footer {
+  font-size: 0.8rem;
+  color: #475569;
+  text-align: center;
+  margin-top: 24px;
+  line-height: 1.5;
+}
+
+/* Application form sections */
+.form-section {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.form-section h3 {
+  font-size: 1rem;
+  color: var(--gold);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Account entry */
+.account-entry {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 12px;
+}
+.add-account-btn {
+  color: var(--gold);
+  background: none;
+  border: 1px dashed var(--gold);
+  border-radius: var(--radius);
+  padding: 12px;
+  width: 100%;
+  cursor: pointer;
+  font-size: 0.95rem;
+  margin-top: 8px;
+  transition: all var(--transition);
+}
+.add-account-btn:hover { background: var(--gold-dim); }
+
+/* Responsive */
+@media (max-width: 480px) {
+  h1 { font-size: 1.5rem; }
+  .big-number { font-size: 2rem; }
+  .input-row { grid-template-columns: 1fr; }
+  .comparison { grid-template-columns: 1fr; }
+  .app-container { padding: 50px 16px 32px; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="app-container">
+
+<!-- ============================== -->
+<!-- PHASE 1: HOOK & QUALIFYING -->
+<!-- ============================== -->
+
+<div class="screen active" id="s01">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+    <div class="phase-label">Income Calibration</div>
+    <h1 style="font-size:2rem;">Your Personal Decumulation Analysis</h1>
+    <p class="screen-text">Most retirement plans start with your portfolio and try to generate income from it. <strong>Income Calibration inverts that.</strong> It starts with your actual lifestyle — what you spend, what you need, what you refuse to give up — and reverse-engineers the financial structure to guarantee it. The money serves the life. Not the other way around.</p>
+    <p class="screen-text">See if you can be accepted into a program that <strong>locks in your exact lifestyle, your exact income number, for life</strong>, regardless of what the market does.</p>
+    <div class="highlight-box" style="margin:16px 0;">
+      <p style="font-size:0.95rem;">"Lock In Your Lifestyle" is not for everyone. We work with a <strong>limited number of households per quarter</strong>. To be considered, complete your Income Calibration and submit your application. Our team will review your situation and, if it's a fit, we'll schedule your personal strategy session.</p>
+    </div>
+    <p class="screen-text" style="text-align:center;">To calibrate your income, we need your specific numbers. Complete your application to begin.</p>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('q1')">Begin Your Income Calibration</button>
+  </div>
+</div>
+
+<!-- Q1: Worried about running out — 2 answers only -->
+<div class="screen" id="q1">
+  <h2>Are you at least a little worried about the possibility of running out of money in retirement at some point?</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.worriedRunOut='Yes, that concerns me';goTo('q2')">Yes, that concerns me</button>
+    <button class="btn btn-secondary" onclick="D.worriedRunOut='Not really';goTo('q2')">Not really</button>
+  </div>
+</div>
+
+<!-- Q2: Written decumulation plan — 2 answers only -->
+<div class="screen" id="q2">
+  <h2>Do you have a written decumulation retirement income plan that tells you, in black and white, how much you can safely spend each month without running out?</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.hasWrittenPlan='No';goTo('q3')">No, I don't have that</button>
+    <button class="btn btn-secondary" onclick="D.hasWrittenPlan='Yes';goTo('q3')">Yes, I do</button>
+  </div>
+</div>
+
+<!-- Q3: Protect gains — 2 answers only -->
+<div class="screen" id="q3">
+  <h2>Do you have a clear way to protect the gains of the past 10 years if we get another major market drop?</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.canProtectGains='No';goTo('q4')">No, not really</button>
+    <button class="btn btn-secondary" onclick="D.canProtectGains='Yes';goTo('q4')">Yes, I have a plan</button>
+  </div>
+</div>
+
+<!-- Q4: Paycheck stops — 2 answers only -->
+<div class="screen" id="q4">
+  <h2>If your paycheck stopped for good tomorrow, do you feel 100% confident that what you've saved will cover your lifestyle for as long as you live?</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.confidentSavings='No';goTo('s09')">No, I'm not confident</button>
+    <button class="btn btn-secondary" onclick="D.confidentSavings='Yes';goTo('s09')">Yes, I'm confident</button>
+  </div>
+</div>
+
+<!-- Concern (was "Fear") -->
+<div class="screen" id="s09">
+  <h2>What concerns you most about retirement?</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.biggestFear='Running out of money before I run out of life';goTo('s08')">Running out of money before I die</button>
+    <button class="btn btn-primary" onclick="D.biggestFear='A market crash destroying my savings right when I need them most';goTo('s08')">A market crash wiping out my savings</button>
+    <button class="btn btn-primary" onclick="D.biggestFear='My spouse not being taken care of if something happens to me';goTo('s08')">My spouse not being taken care of</button>
+    <button class="btn btn-primary" onclick="D.biggestFear='Healthcare costs or a long-term care event draining everything I\'ve saved';goTo('s08')">Healthcare costs draining everything</button>
+    <button class="btn btn-secondary" onclick="D.biggestFear='All of the above — I\'m worried about losing what I\'ve worked my whole life to build';goTo('s08')">Honestly, all of the above</button>
+  </div>
+</div>
+
+<!-- Obstacles -->
+<div class="screen" id="s08">
+  <h2>What's the biggest thing standing in your way of knowing your retirement will be secure?</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.obstacles='I don\'t know if I have enough saved to retire comfortably';goTo('s07')">I'm not sure I have enough saved</button>
+    <button class="btn btn-primary" onclick="D.obstacles='I\'m worried the stock market could wipe out my savings right when I need them';goTo('s07')">The stock market could wipe out my savings</button>
+    <button class="btn btn-primary" onclick="D.obstacles='I don\'t have a clear plan to turn my savings into reliable income';goTo('s07')">I don't have a plan to turn savings into income</button>
+    <button class="btn btn-primary" onclick="D.obstacles='My current advisor hasn\'t given me confidence that I\'m on the right track';goTo('s07')">My current advisor hasn't given me a real plan</button>
+    <button class="btn btn-secondary" onclick="D.obstacles='I have multiple concerns about my retirement readiness';goTo('s07')">All of the above</button>
+  </div>
+</div>
+
+<!-- Vision -->
+<div class="screen" id="s07">
+  <h2>What does the ideal retirement look like for you?</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.idealRetirement='Travel freely and enjoy life — vacations, experiences, and no guilt about spending';goTo('s02')">Travel freely and enjoy life without worrying about money</button>
+    <button class="btn btn-primary" onclick="D.idealRetirement='Spend time with family and grandkids — be present, not stressed about finances';goTo('s02')">Spend quality time with family and grandkids</button>
+    <button class="btn btn-primary" onclick="D.idealRetirement='Live comfortably and stay independent — cover my bills, keep my home, never be a burden';goTo('s02')">Live comfortably and never be a burden on anyone</button>
+    <button class="btn btn-primary" onclick="D.idealRetirement='Finally relax — golf, fish, garden, hobbies — do what I want on my own schedule';goTo('s02')">Finally relax and do what I want, when I want</button>
+    <button class="btn btn-primary" onclick="D.idealRetirement='ALL OF IT! I want to travel, spend time with family and live my lifestyle with peace of mind!';goTo('s02')">ALL OF IT! I want to travel, spend time with family and live my lifestyle with peace of mind!</button>
+  </div>
+</div>
+
+<!-- NAME & INFO COLLECTION -->
+<div class="screen" id="s02">
+  <div class="phase-label">Let's Get Personal</div>
+  <h2>Great. To run your numbers, I need a few details.</h2>
+  <div class="input-group">
+    <label>Your First Name</label>
+    <input type="text" id="firstName" placeholder="e.g. John" autocomplete="given-name">
+  </div>
+  <div class="input-group">
+    <label>Spouse/Partner's First Name <em>(leave blank if N/A)</em></label>
+    <input type="text" id="spouseName" placeholder="e.g. Mary" autocomplete="off">
+  </div>
+  <div class="input-row">
+    <div class="input-group">
+      <label>Your Age</label>
+      <input type="number" id="age" placeholder="62" min="40" max="85">
+    </div>
+    <div class="input-group">
+      <label>Spouse's Age</label>
+      <input type="number" id="spouseAge" placeholder="60" min="40" max="85">
+    </div>
+  </div>
+  <div class="input-group">
+    <label>How many years until you retire / start taking income?</label>
+    <input type="number" id="yearsToIncome" placeholder="5" min="0" max="30">
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="saveBasicInfo()">Continue</button>
+    <button class="btn btn-secondary" onclick="goBack()" style="border:none;font-size:0.9rem;">&#8592; Back</button>
+  </div>
+</div>
+
+<!-- THE OPPORTUNITY + COMMITMENT — Combined -->
+<div class="screen" id="s04">
+  <div class="phase-label">The Opportunity</div>
+  <h2>Mathematically and Scientifically <strong style="color:var(--gold);">OPTIMIZE</strong> Your Retirement</h2>
+  <p class="screen-text">Using our Income Calibration process, you could spend potentially <strong>DOUBLE OR TRIPLE</strong> the income vs. Wall Street retirement plans.</p>
+  <p class="screen-text">This isn't guesswork — it's math backed by Nobel Prize-winning economists, BlackRock, and Ernst & Young.</p>
+  <p class="screen-text">If you can see how the numbers work and this genuinely solves the problems you just described — <strong>are you ready to take action?</strong></p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s14')">Show me how!</button>
+    <button class="btn btn-secondary" onclick="goBack()" style="border:none;font-size:0.9rem;">&#8592; Back</button>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- PHASE 3: FACT FINDER -->
+<!-- ============================== -->
+
+<div class="screen" id="s14">
+  <div class="phase-label">Income Sources</div>
+  <h2 id="s14-heading">What will your Social Security be?</h2>
+  <p class="screen-text">At full retirement age, what do you expect your monthly Social Security benefit to be? <em>(If unsure, $2,500/month is a common estimate. Check yours at ssa.gov.)</em></p>
+  <div class="input-group">
+    <label>Your Monthly Social Security</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="socialSecurity" placeholder="2,500">
+    </div>
+  </div>
+  <div id="spouseSS" style="display:none">
+    <div class="input-group">
+      <label id="spouseSSLabel">Spouse's Monthly Social Security</label>
+      <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:6px;">If your spouse hasn't worked full-time, plan on about 50% of your number above.</p>
+      <div class="dollar-input">
+        <input type="text" inputmode="numeric" id="spouseSocialSecurity" placeholder="1,250">
+      </div>
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="saveSocialSecurity()">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="s16">
+  <div class="phase-label">Income Sources</div>
+  <h2>Do you have a pension?</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="showPensionInput()">Yes</button>
+    <button class="btn btn-primary" onclick="D.pension=0;goTo('s17')">No</button>
+  </div>
+  <div id="pensionInputArea" style="display:none;margin-top:20px;">
+    <div class="input-group">
+      <label>Monthly Pension Amount</label>
+      <div class="dollar-input">
+        <input type="text" inputmode="numeric" id="pension" placeholder="1,500">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="D.pension=numVal('pension');goTo('s17')" style="margin-top:12px;">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="s17">
+  <div class="phase-label">Income Sources</div>
+  <h2>Any other income in retirement?</h2>
+  <p class="screen-text">Rental properties, part-time work, royalties, side business?</p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="showOtherIncomeInput()">Yes</button>
+    <button class="btn btn-primary" onclick="D.otherIncome=0;goTo('s18')">No</button>
+  </div>
+  <div id="otherIncomeInputArea" style="display:none;margin-top:20px;">
+    <div class="input-group">
+      <label>Monthly Amount (net)</label>
+      <div class="dollar-input">
+        <input type="text" inputmode="numeric" id="otherIncome" placeholder="1,000">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="D.otherIncome=numVal('otherIncome');goTo('s18')" style="margin-top:12px;">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="s18">
+  <div class="phase-label">Your Expenses</div>
+  <h2>What are your monthly household expenses?</h2>
+  <p class="screen-text">Include everything — mortgage/rent, utilities, food, insurance, entertainment, all of it. Ballpark is fine.</p>
+  <div class="input-group">
+    <label>Monthly Expenses</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="monthlyExpenses" placeholder="5,000">
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.monthlyExpenses=numVal('monthlyExpenses');goTo('s19')">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="s19">
+  <div class="phase-label">Your Expenses</div>
+  <h2>When you retire, do you expect expenses to...</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.expenseDirection='up';goTo('s20')">Go up</button>
+    <button class="btn btn-primary" onclick="D.expenseDirection='same';goTo('s20')">Stay about the same</button>
+    <button class="btn btn-primary" onclick="D.expenseDirection='down';goTo('s20')">Go down</button>
+  </div>
+</div>
+
+<div class="screen" id="s20">
+  <div class="phase-label">Your Target</div>
+  <h2 id="s20-heading">What monthly income do you want in retirement?</h2>
+  <p class="screen-text" id="s20-text"></p>
+  <div class="input-group">
+    <label>Desired Monthly Income</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="desiredMonthlyIncome" placeholder="6,000">
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="saveDesiredIncome()">Let's Look at the Numbers</button>
+  </div>
+</div>
+
+<!-- THE INCOME GAP — AHA MOMENT -->
+<div class="screen" id="s21">
+  <div class="phase-label">The Reality</div>
+  <h2>Your Retirement Income Gap</h2>
+  <div class="summary-table">
+    <div class="summary-row">
+      <span class="label">Your desired monthly income</span>
+      <span class="value" id="s21-desired"></span>
+    </div>
+    <div class="summary-row">
+      <span class="label">Your Social Security</span>
+      <span class="value" id="s21-ss"></span>
+    </div>
+    <div class="summary-row" id="s21-spouse-row" style="display:none">
+      <span class="label" id="s21-spouse-label">Spouse's Social Security</span>
+      <span class="value" id="s21-spouseSS"></span>
+    </div>
+    <div class="summary-row" id="s21-pension-row" style="display:none">
+      <span class="label">Pension</span>
+      <span class="value" id="s21-pension"></span>
+    </div>
+    <div class="summary-row" id="s21-other-row" style="display:none">
+      <span class="label">Other Income</span>
+      <span class="value" id="s21-other"></span>
+    </div>
+    <div class="summary-row" style="border-top:2px solid var(--gold);">
+      <span class="label" style="color:var(--text-bright);font-weight:600;">Total Guaranteed Income</span>
+      <span class="value" style="color:var(--success);" id="s21-total"></span>
+    </div>
+  </div>
+  <div id="s21-gap-box" class="highlight-box danger">
+    <p style="text-align:center;font-size:0.9rem;color:var(--text-dim);margin-bottom:4px;">YOUR MONTHLY INCOME GAP</p>
+    <div class="big-number danger" id="s21-gap"></div>
+    <p style="text-align:center;font-size:0.95rem;" id="s21-gap-text">That's <strong id="s21-annual"></strong>/year that needs to come from your savings — <strong>every year, for as long as you live.</strong></p>
+  </div>
+  <div id="s21-contingency" style="display:none;"></div>
+  <div class="btn-group">
+    <button class="btn btn-primary" id="s21-btn" onclick="goTo('s22')">How do we fill this gap?</button>
+  </div>
+</div>
+
+<!-- ACCOUNT DISCOVERY -->
+<div class="screen" id="s22">
+  <div class="phase-label">Your Savings</div>
+  <h2>Let's look at what you've saved.</h2>
+  <p class="screen-text">Stop thinking of these as numbers on a statement. Picture your money as a <strong>big stack of cash on the table</strong>. It's real money. Let's treat it that way.</p>
+  <div class="input-group">
+    <label>Traditional IRA</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="iraBalance" placeholder="0">
+    </div>
+  </div>
+  <div class="input-group">
+    <label>Roth IRA</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="rothIraBalance" placeholder="0">
+    </div>
+  </div>
+  <div class="input-group">
+    <label>Traditional 401(k) / 403(b)</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="fourOhOneKBalance" placeholder="0">
+    </div>
+  </div>
+  <div class="input-group">
+    <label>Roth 401(k)</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="roth401kBalance" placeholder="0">
+    </div>
+  </div>
+  <div id="spouseAccountsArea">
+    <div class="input-group">
+      <label id="spouseAcctLabel">Spouse's Retirement Accounts</label>
+      <div class="dollar-input">
+        <input type="text" inputmode="numeric" id="spouseRetirementBalance" placeholder="0">
+      </div>
+    </div>
+  </div>
+  <div class="input-group">
+    <label>Brokerage / Investment Accounts</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="brokerageBalance" placeholder="0">
+    </div>
+  </div>
+  <div class="input-group">
+    <label>Savings / Checking / CDs</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="savingsBalance" placeholder="0">
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="saveAccounts()">See My Total</button>
+  </div>
+</div>
+
+<!-- PORTFOLIO SUMMARY — Updated text -->
+<div class="screen" id="s27">
+  <div class="phase-label">Your Full Picture</div>
+  <h2>Here's where you stand.</h2>
+  <div class="highlight-box">
+    <p style="text-align:center;font-size:0.9rem;color:var(--text-dim);margin-bottom:4px;">TOTAL RETIREMENT SAVINGS</p>
+    <div class="big-number" id="s27-total"></div>
+  </div>
+  <div class="highlight-box danger">
+    <p style="text-align:center;font-size:0.9rem;color:var(--text-dim);margin-bottom:4px;">YOUR ANNUAL INCOME GAP</p>
+    <div class="big-number danger" id="s27-annual-gap"></div>
+  </div>
+  <p class="screen-text" id="s27-withdrawal-text"></p>
+  <p class="screen-text">This is a <strong>"HOPE SO" Strategy</strong>. With market losses and inflation it may go down even more. So why settle for "hoping it will work out" when you can <strong>KNOW</strong> it will work out by locking in your lifestyle?</p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s29')">I don't want to HOPE — I want to Lock In My Lifestyle</button>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- SIMPLIFIED RISK CHECK -->
+<!-- ============================== -->
+
+<!-- Risk tolerance question -->
+<div class="screen" id="s29">
+  <div class="phase-label">Reality Check</div>
+  <h1 style="color:var(--danger);">Market Losses</h1>
+  <h2>How much of your life savings are you willing to lose?</h2>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.riskTolerance='none';goTo('sPathForward')">None of my money</button>
+    <button class="btn btn-secondary" onclick="D.riskTolerance='some';goTo('sPathForward')">Some of my money</button>
+    <button class="btn btn-secondary" onclick="D.riskTolerance='all';goTo('sPathForward')">All of my money</button>
+  </div>
+</div>
+
+<!-- The Path Forward -->
+<div class="screen" id="sPathForward">
+  <div class="phase-label">The Path Forward</div>
+  <h2>There is a way.</h2>
+  <p class="screen-text">There is a way to protect your hard-earned wealth, to <strong>lock in your lifestyle</strong>, and be able to spend potentially <strong>double or triple</strong> each month without worrying about running out.</p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s46')">Let's Finish It Up</button>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- PHASE 6: YOUR NUMBERS -->
+<!-- ============================== -->
+
+<div class="screen" id="s46">
+  <div class="phase-label">Your Plan</div>
+  <h2>Let's allocate your money strategically.</h2>
+  <p class="screen-text">In our Income Calibration Process we use these 3 buckets:</p>
+  <div class="highlight-box">
+    <p><strong>SLEEP</strong> — Emergency fund, stays accessible so you can sleep at night</p>
+    <p style="margin-top:8px;"><strong>SPEND</strong> — Generates guaranteed lifetime income you can SPEND forever</p>
+    <p style="margin-top:8px;"><strong>GIVE</strong> — Stays invested for heirs</p>
+  </div>
+  <p class="screen-text" id="s46-text"></p>
+  <div class="input-group">
+    <label>SPEND Bucket Amount</label>
+    <div class="dollar-input">
+      <input type="text" inputmode="numeric" id="incomeBucketAmount">
+    </div>
+  </div>
+  <p class="screen-text" style="font-size:0.9rem;color:var(--text-dim);" id="s46-remaining"></p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="saveIncomeBucket()">Show me the income</button>
+  </div>
+</div>
+
+<!-- THE BIG REVEAL -->
+<div class="screen" id="s49">
+  <div class="phase-label">Your Guaranteed Income</div>
+  <h2>Here are your numbers.</h2>
+  <div class="summary-table">
+    <div class="summary-row">
+      <span class="label">Your contribution</span>
+      <span class="value" id="s49-contribution"></span>
+    </div>
+    <div class="summary-row">
+      <span class="label">Day-one bonus (applied to Income Value)</span>
+      <span class="value" style="color:var(--success);" id="s49-bonus"></span>
+    </div>
+    <div class="summary-row">
+      <span class="label">Starting Income Value</span>
+      <span class="value" id="s49-startingIV"></span>
+    </div>
+    <div class="summary-row">
+      <span class="label">Guaranteed annual growth</span>
+      <span class="value">7% minimum</span>
+    </div>
+  </div>
+
+  <div id="s49-growth-table" style="margin:20px 0;"></div>
+
+  <div class="highlight-box success" style="text-align:center;">
+    <p style="font-size:0.9rem;color:var(--text-dim);margin-bottom:4px;">YOUR GUARANTEED MONTHLY INCOME</p>
+    <div class="big-number success" id="s49-income"></div>
+    <p style="font-size:1rem;">For <strong>BOTH</strong> of your lifetimes. No matter how long you live.</p>
+  </div>
+
+  <div class="comparison">
+    <div class="comparison-col bad">
+      <h3>Your Income Gap</h3>
+      <div class="val" id="s49-gap"></div>
+    </div>
+    <div class="comparison-col good">
+      <h3>Guaranteed Income</h3>
+      <div class="val" id="s49-income2"></div>
+    </div>
+  </div>
+
+  <p class="screen-text" id="s49-verdict" style="text-align:center;font-weight:600;font-size:1.1rem;"></p>
+
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('sHeirs')">Continue</button>
+  </div>
+</div>
+
+<!-- HEIRS SLIDE — NEW -->
+<div class="screen" id="sHeirs">
+  <div class="phase-label">Your Legacy</div>
+  <h2>What happens to the money you don't use?</h2>
+  <p class="screen-text">In the Modern Income Annuity, if you don't use all the money in the account when you die, <strong>whatever is left will go to your heirs</strong>.</p>
+  <p class="screen-text">Your money isn't lost. It either pays <strong>you</strong> for the rest of your life, or it goes to <strong>your family</strong>.</p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s52')">What about healthcare?</button>
+  </div>
+</div>
+
+<!-- HEALTHCARE — KEPT -->
+<div class="screen" id="s52">
+  <div class="phase-label">Built-In Protection</div>
+  <h2>The Income Doubler</h2>
+  <p class="screen-text">Healthcare costs can run <strong>$8,000-$12,000/month</strong> for long-term care.</p>
+  <p class="screen-text">This contract has a built-in feature: if you can't perform 2 of 6 daily activities (bathing, dressing, eating, etc.), <strong>your income DOUBLES</strong>.</p>
+  <div class="comparison">
+    <div class="comparison-col" style="background:var(--card-bg);border:1px solid var(--card-border);">
+      <h3>Regular Income</h3>
+      <div class="val" style="color:var(--text-bright);" id="s52-regular"></div>
+    </div>
+    <div class="comparison-col good">
+      <h3>Doubled Income</h3>
+      <div class="val" id="s52-doubled"></div>
+    </div>
+  </div>
+  <p class="screen-text"><strong>No extra cost.</strong> It comes along for the ride. No separate LTC policy, no rising premiums, no cancellation risk.</p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s53')">See how this compares to the stock market</button>
+  </div>
+</div>
+
+<!-- THE COMPARISON — Updated with 7% stock growth calc -->
+<div class="screen" id="s53">
+  <div class="phase-label">The Comparison</div>
+  <h2>Stock Portfolio vs. Guaranteed Income</h2>
+  <p class="screen-text" id="s53-text"></p>
+  <div class="comparison">
+    <div class="comparison-col bad">
+      <h3>Stock Portfolio @ 7%</h3>
+      <div class="val" id="s53-stock-income"></div>
+      <p style="font-size:0.85rem;margin-top:8px;">2.5% withdrawal rate</p>
+    </div>
+    <div class="comparison-col good">
+      <h3>Income Calibration</h3>
+      <div class="val" id="s53-annuity-income"></div>
+      <p style="font-size:0.85rem;margin-top:8px;">Guaranteed for life</p>
+    </div>
+  </div>
+  <div class="highlight-box danger" style="margin-top:16px;">
+    <p class="screen-text" style="margin-bottom:0;"><strong>PLUS</strong>, that stock number <strong>can and will go down</strong> when the market crashes, and could run out entirely. The annuity income is <strong>guaranteed to last for life</strong>.</p>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s54')">I'm starting to see it</button>
+  </div>
+</div>
+
+<div class="screen" id="s54">
+  <div class="phase-label">The Bottom Line</div>
+  <h2>This is retirement income insurance.</h2>
+  <p class="screen-text">You insure your house, your car, your health. This is no different.</p>
+  <p class="screen-text">You're protecting against the biggest risk in retirement — <strong>living a long time and running out of money</strong>.</p>
+  <p class="screen-text">If you both pass at 80, you still got more than you put in. But if one of you lives to 92, 95, 97 — and the stats say there's a real chance — <strong>this income never stops</strong>. It doesn't matter what the stock market does, what happens with interest rates, or what the next crisis is.</p>
+  <p class="screen-text" style="font-size:1.1rem;text-align:center;"><strong>You get your check every month, for life.</strong></p>
+  <p class="screen-text" style="text-align:center;">That is what <strong>"locking in your lifestyle"</strong> actually means.</p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s55')">Where do I stand?</button>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- PHASE 7: THE CLOSE -->
+<!-- ============================== -->
+
+<!-- YOUR DECISION -->
+<div class="screen" id="s55">
+  <div class="phase-label">Your Decision</div>
+  <h2 id="s55-heading"></h2>
+  <p class="screen-text" id="s55-text"></p>
+  <p class="screen-text" id="s55-text2"></p>
+  <div id="s55-summary" style="margin:16px 0;"></div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.readyScale=10;goTo('s56')">Yes, I'm in</button>
+  </div>
+</div>
+
+<!-- HIGH READINESS — Updated steps -->
+<div class="screen" id="s56">
+  <div class="phase-label">Let's Do This</div>
+  <h2 id="s56-heading"></h2>
+  <p class="screen-text">Here's what moving forward looks like:</p>
+  <div class="checklist-item"><span class="check">1</span> Finish the application — over 87% finished!</div>
+  <div class="checklist-item"><span class="check">2</span> Schedule a short call to answer questions and finalize details</div>
+  <div class="checklist-item"><span class="check">3</span> When you are ready you can fund the account, with zero tax consequences</div>
+  <div class="checklist-item"><span class="check">4</span> Your new account is established and your guaranteed income clock starts</div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s61')">Almost there — let's finish up</button>
+  </div>
+</div>
+
+<!-- MEDIUM READINESS 5-7 -->
+<div class="screen" id="s57">
+  <h2>You're interested but not all the way there.</h2>
+  <p class="screen-text">What's the main thing holding you back?</p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="D.holdback='I\'m worried about locking up my money';goTo('s58')">I'm worried about locking up my money</button>
+    <button class="btn btn-primary" onclick="D.holdback='I think I can get better returns in the market';goTo('s58')">I think I can do better in the market</button>
+    <button class="btn btn-primary" onclick="D.holdback='I need to talk to my spouse or advisor first';goTo('s58')">I need to talk to my spouse or advisor first</button>
+    <button class="btn btn-primary" onclick="D.holdback='I don\'t want to leave nothing for my kids';goTo('s58')">I'm concerned about leaving money to my kids</button>
+    <button class="btn btn-secondary" onclick="D.holdback='I just need more time to think about this';goTo('s58')">I just need more time to think</button>
+  </div>
+</div>
+
+<div class="screen" id="s58">
+  <div class="phase-label">Addressing Your Concern</div>
+  <div id="s58-content"></div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s61')">I'm ready to move forward</button>
+    <button class="btn btn-secondary" onclick="goTo('s59b')">I'd rather schedule a call</button>
+  </div>
+</div>
+
+<!-- LOW READINESS -->
+<div class="screen" id="s59">
+  <h2 id="s59-heading"></h2>
+  <p class="screen-text" id="s59-text"></p>
+  <p class="screen-text">When you're ready to solve this, we'll be here.</p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s59b')">Schedule a call for later</button>
+  </div>
+</div>
+
+<!-- SCHEDULE A CALL -->
+<div class="screen" id="s59b">
+  <div class="phase-label">Let's Connect</div>
+  <h2>Schedule a time to talk through this together.</h2>
+  <p class="screen-text">We'll go through your numbers with a retirement income specialist — and anyone else you'd like on the call.</p>
+  <div class="input-group">
+    <label>Your Phone Number</label>
+    <input type="tel" id="callbackPhone" placeholder="(555) 123-4567">
+  </div>
+  <div class="input-group">
+    <label>Your Email</label>
+    <input type="email" id="callbackEmail" placeholder="your@email.com">
+  </div>
+  <div class="input-group">
+    <label>Best time to call?</label>
+    <select id="callbackTime">
+      <option value="">Select a time...</option>
+      <option>Morning (9am-12pm)</option>
+      <option>Afternoon (12pm-3pm)</option>
+      <option>Late Afternoon (3pm-5pm)</option>
+    </select>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="submitCallback()">Request a Call</button>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- PHASE 8: THE APPLICATION -->
+<!-- ============================== -->
+
+<div class="screen" id="s61">
+  <div class="phase-label">Application — Your Information</div>
+  <p class="screen-text">All information is encrypted and secure.</p>
+  <div class="form-section">
+    <h3>Primary Applicant</h3>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Legal First Name</label>
+        <input type="text" id="appFirstName">
+      </div>
+      <div class="input-group">
+        <label>Legal Last Name</label>
+        <input type="text" id="appLastName">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Date of Birth</label>
+        <input type="date" id="appDOB">
+      </div>
+      <div class="input-group">
+        <label>SSN</label>
+        <input type="text" id="appSSN" placeholder="XXX-XX-XXXX" maxlength="11">
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Street Address</label>
+      <input type="text" id="appAddress">
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>City</label>
+        <input type="text" id="appCity">
+      </div>
+      <div class="input-group">
+        <label>State</label>
+        <input type="text" id="appState" maxlength="2" placeholder="XX">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>ZIP Code</label>
+        <input type="text" id="appZip" maxlength="10">
+      </div>
+      <div class="input-group">
+        <label>Phone</label>
+        <input type="tel" id="appPhone">
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Email</label>
+      <input type="email" id="appEmail">
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo(D.spouseName?'s62':'s65')">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="s62">
+  <div class="phase-label">Application — Spouse Information</div>
+  <div class="form-section">
+    <h3 id="s62-heading">Spouse Information</h3>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Legal First Name</label>
+        <input type="text" id="appSpouseFirst">
+      </div>
+      <div class="input-group">
+        <label>Legal Last Name</label>
+        <input type="text" id="appSpouseLast">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Date of Birth</label>
+        <input type="date" id="appSpouseDOB">
+      </div>
+      <div class="input-group">
+        <label>SSN</label>
+        <input type="text" id="appSpouseSSN" placeholder="XXX-XX-XXXX" maxlength="11">
+      </div>
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s65')">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="s65">
+  <div class="phase-label">Application — Suitability</div>
+  <p class="screen-text">A few required questions to confirm this is right for your situation.</p>
+  <div class="form-section">
+    <div class="input-row">
+      <div class="input-group">
+        <label>Annual Household Income</label>
+        <div class="dollar-input">
+          <input type="text" inputmode="numeric" id="suitIncome" placeholder="0">
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Net Worth (approx.)</label>
+        <div class="dollar-input">
+          <input type="text" inputmode="numeric" id="suitNetWorth" placeholder="0">
+        </div>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Liquid Net Worth</label>
+      <div class="dollar-input">
+        <input type="text" inputmode="numeric" id="suitLiquid" placeholder="0">
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Primary Investment Objective</label>
+      <select id="suitObjective">
+        <option value="">Select...</option>
+        <option>Safety of Principal</option>
+        <option>Income</option>
+        <option>Growth & Income</option>
+        <option>Growth</option>
+      </select>
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s64')">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="s64">
+  <div class="phase-label">Application — Accounts to Transfer</div>
+  <p class="screen-text">Which accounts are you transferring? We won't initiate transfers until we speak and confirm details.</p>
+  <div id="accountEntries">
+    <div class="account-entry">
+      <div class="input-group">
+        <label>Current Company / Custodian</label>
+        <input type="text" class="acctCompany" placeholder="e.g. Fidelity, Schwab, Edward Jones">
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Account Type</label>
+          <select class="acctType">
+            <option value="">Select...</option>
+            <option>Traditional IRA</option>
+            <option>Roth IRA</option>
+            <option>401(k)</option>
+            <option>403(b)</option>
+            <option>Brokerage</option>
+            <option>Annuity</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Approximate Balance</label>
+          <div class="dollar-input">
+            <input type="text" inputmode="numeric" class="acctBalance" placeholder="0">
+          </div>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Account Number (if known)</label>
+        <input type="text" class="acctNumber" placeholder="Optional">
+      </div>
+    </div>
+  </div>
+  <button class="add-account-btn" onclick="addAccountEntry()">+ Add Another Account</button>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goTo('s66')">Continue</button>
+  </div>
+</div>
+
+<!-- REVIEW & CONFIRM -->
+<div class="screen" id="s66">
+  <div class="phase-label">Review & Confirm</div>
+  <h2>Review your application.</h2>
+  <div id="s66-summary"></div>
+  <div class="highlight-box success" style="text-align:center;margin-top:20px;">
+    <p style="font-size:0.9rem;color:var(--text-dim);margin-bottom:4px;">YOUR GUARANTEED MONTHLY INCOME</p>
+    <div class="big-number success" id="s66-income"></div>
+    <p>For <strong>both</strong> of your lifetimes. Guaranteed.</p>
+  </div>
+  <p class="screen-text" style="font-size:0.85rem;color:var(--text-dim);text-align:center;">By submitting, you authorize us to begin the application process. A licensed specialist will review and contact you to finalize details.</p>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="submitApplication()">Start Locking In Your Lifestyle</button>
+    <button class="btn btn-secondary" onclick="goTo('s64')">Go back and edit</button>
+  </div>
+</div>
+
+<!-- CONFIRMATION -->
+<div class="screen" id="s67">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:16px;">&#10003;</div>
+    <h1>You're Almost There.</h1>
+    <h2 id="s67-heading" style="color:var(--gold);"></h2>
+    <p class="screen-text">A retirement income specialist will review your case, answer your questions, and finalize everything with you.</p>
+    <p class="screen-text"><strong>The next step is to schedule your case review appointment:</strong></p>
+    <div class="btn-group">
+      <a class="btn btn-primary" href="#" id="calendarLink" target="_blank" style="text-decoration:none;">Schedule My Case Review</a>
+    </div>
+    <div style="text-align:left;max-width:480px;margin:20px auto 0;">
+      <p style="font-size:0.95rem;color:var(--text-dim);margin-bottom:12px;">During your case review, your specialist will:</p>
+      <div class="checklist-item"><span class="check">&#10003;</span> Review your answers and financial situation</div>
+      <div class="checklist-item"><span class="check">&#10003;</span> Show you the best options for your specific case</div>
+      <div class="checklist-item"><span class="check">&#10003;</span> Finalize your decumulation income plan</div>
+      <div class="checklist-item"><span class="check">&#10003;</span> Walk you through the application and next steps</div>
+    </div>
+  </div>
+</div>
+
+<!-- EXIT SCREENS -->
+<div class="screen" id="exit-early">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;">
+    <h2>No problem at all.</h2>
+    <p class="screen-text">When you're ready to explore whether a guaranteed income strategy could work for you, come back anytime.</p>
+    <div class="input-group" style="margin-top:20px;">
+      <label>Leave your email for our free retirement research guide:</label>
+      <input type="email" id="exitEmail" placeholder="your@email.com">
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="submitExitEmail()">Send me the guide</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="exit-resources">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;">
+    <h2>Here are some resources to review.</h2>
+    <p class="screen-text">When you're serious about locking in your lifestyle, come back and we'll run your numbers.</p>
+    <div class="input-group" style="margin-top:20px;">
+      <label>Your email for the free research guide:</label>
+      <input type="email" id="resourceEmail" placeholder="your@email.com">
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="submitExitEmail()">Send me the resources</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="callback-confirm">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:16px;">&#128222;</div>
+    <h2>We'll be in touch!</h2>
+    <p class="screen-text">A retirement income specialist will call you at the time you requested. They'll have your numbers ready so you can pick up right where you left off.</p>
+    <p class="screen-text" style="color:var(--gold);">In the meantime, remember: your income gap of <span id="cb-gap"></span>/month is real, and every day without a plan is a day your retirement is at risk.</p>
+  </div>
+</div>
+
+</div><!-- /app-container -->
+
+<script>
+// ============================================
+// SUPABASE CONNECTION
+// ============================================
+// TODO: Replace with your Supabase project URL and anon key
+// Find these at: https://supabase.com/dashboard → Project Settings → API
+const SUPABASE_URL = 'https://vqdryjasukjfnuvnwqpp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxZHJ5amFzdWtqZm51dm53cXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODc1MjUsImV4cCI6MjA5MTI2MzUyNX0.32VQD9O4eXPr5hfmd1YlUA_bdJzVmB7enpgqXX6WMVw';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function saveToSupabase(type, data) {
+  try {
+    const { error } = await supabase
+      .from('submissions')
+      .insert({
+        type: type,
+        status: type === 'application' ? 'pending_review' : 'new',
+        first_name: data.prospect?.firstName || data.firstName || '',
+        email: data.application?.primary?.email || data.callbackEmail || data.email || '',
+        phone: data.application?.primary?.phone || data.callbackPhone || '',
+        data: data
+      });
+    if (error) {
+      console.error('Supabase error:', error);
+      return false;
+    }
+    console.log('Saved to Supabase:', type);
+    return true;
+  } catch (err) {
+    console.error('Supabase connection error:', err);
+    return false;
+  }
+}
+
+// ============================================
+// DATA STORE
+// ============================================
+const D = {
+  firstName: '', spouseName: '', age: 0, spouseAge: 0,
+  seriousnessScore: 5, idealRetirement: '', obstacles: '', biggestFear: '',
+  meaningIfSolved: '', decisionMakers: 'self', hesitationReason: '',
+  retirementTimeline: '', socialSecurity: 0, spouseSocialSecurity: 0,
+  pension: 0, otherIncome: 0, monthlyExpenses: 0, expenseDirection: 'same',
+  desiredMonthlyIncome: 0, incomeGap: 0,
+  iraBalance: 0, fourOhOneKBalance: 0, spouseRetirementBalance: 0,
+  brokerageBalance: 0, savingsBalance: 0, totalPortfolio: 0,
+  riskTolerance: 'none', hasLTCPlan: 'none',
+  timeCommitmentOk: false, capOk: false,
+  incomeBucketAmount: 0, incomePreference: 'increasing',
+  readyScale: 5, holdback: '',
+  // Calculated
+  guaranteedIncome: 0, totalGuaranteedMonthly: 0, startingIV: 0,
+  monthlyIncome: 0
+};
+
+// ============================================
+// CONSTANTS
+// ============================================
+const BONUS_RATE = 0.20;
+const GUARANTEED_GROWTH = 0.07;
+const PAYOUT_RATE = 0.055;
+const INCOME_BUCKET_RATIO = 0.75;
+
+// ============================================
+// SCREEN TRACKING — Updated flow
+// ============================================
+const screenOrder = [
+  's01','q1','q2','q3','q4','s09','s08','s07','s02','s04',
+  's14','s16','s17','s18','s19','s20','s21','s22','s27',
+  's29','sPathForward',
+  's46','s49','sHeirs','s52','s53','s54','s55','s56',
+  's61','s62','s65','s64','s66','s67'
+];
+let currentScreen = 's01';
+const history = [];
+
+// ============================================
+// HELPERS
+// ============================================
+function $(id) { return document.getElementById(id); }
+function gv(id) { return $(id) ? $(id).value.replace(/,/g,'').trim() : ''; }
+function numVal(id) { return parseFloat(gv(id)) || 0; }
+function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
+function fmtM(n) { return fmt(n) + '/mo'; }
+
+// Add commas to dollar inputs as user types (skip age/year fields)
+const skipFormatIds = ['age', 'spouseAge', 'yearsToIncome', 'benePercent'];
+document.addEventListener('input', function(e) {
+  if (skipFormatIds.includes(e.target.id)) return;
+  if (e.target.type === 'number') {
+    e.target.type = 'text';
+    e.target.inputMode = 'numeric';
+  }
+  if (e.target.inputMode === 'numeric' || e.target.classList.contains('acctBalance')) {
+    let raw = e.target.value.replace(/[^0-9]/g, '');
+    if (raw) {
+      e.target.value = parseInt(raw).toLocaleString();
+    }
+  }
+});
+
+// ============================================
+// ENTER KEY ADVANCE — on screens with text fields
+// ============================================
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  // Don't interfere with textareas
+  if (e.target.tagName === 'TEXTAREA') return;
+
+  const activeScreen = document.querySelector('.screen.active');
+  if (!activeScreen) return;
+
+  // Only trigger on screens that have input fields
+  const inputs = activeScreen.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"], input[type="date"]');
+  if (inputs.length === 0) return;
+
+  // Find the primary button on this screen
+  const primaryBtn = activeScreen.querySelector('.btn-primary');
+  if (primaryBtn) {
+    e.preventDefault();
+    primaryBtn.click();
+  }
+});
+
+function goBack() {
+  if (history.length > 0) {
+    const prev = history.pop();
+    document.querySelectorAll('.screen.active').forEach(s => s.classList.remove('active'));
+    const target = $(prev);
+    if (target) {
+      target.classList.add('active');
+      currentScreen = prev;
+      updateProgress();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+}
+
+function goTo(id) {
+  history.push(currentScreen);
+  document.querySelectorAll('.screen.active').forEach(s => s.classList.remove('active'));
+  const target = $(id);
+  if (target) {
+    target.classList.add('active');
+    currentScreen = id;
+    updateProgress();
+    populateScreen(id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function updateProgress() {
+  const idx = screenOrder.indexOf(currentScreen);
+  const pct = idx >= 0 ? ((idx + 1) / screenOrder.length * 100) : 0;
+  $('progressFill').style.width = Math.min(pct, 100) + '%';
+}
+
+// ============================================
+// POPULATE SCREENS WITH DYNAMIC DATA
+// ============================================
+function populateScreen(id) {
+  const name = D.firstName || 'there';
+  const spouse = D.spouseName;
+
+  switch(id) {
+    case 's14':
+      $('s14-heading').textContent = name + ', what will your Social Security be?';
+      if (spouse) {
+        $('spouseSS').style.display = 'block';
+        $('spouseSSLabel').textContent = spouse + "'s Monthly Social Security";
+      }
+      break;
+
+    case 's20': {
+      let suggested = D.monthlyExpenses + 1000;
+      if (D.expenseDirection === 'up') suggested = Math.round(D.monthlyExpenses * 1.1) + 1000;
+      if (D.expenseDirection === 'down') suggested = Math.round(D.monthlyExpenses * 0.9) + 1000;
+      $('s20-text').textContent = 'This is the number that lets you live the lifestyle you described. Based on your expenses plus a cushion, we\'d suggest around ' + fmt(suggested) + '/month.';
+      $('desiredMonthlyIncome').value = suggested;
+      break;
+    }
+
+    case 's21': {
+      const totalGuaranteed = D.socialSecurity + D.spouseSocialSecurity + D.pension + D.otherIncome;
+      $('s21-desired').textContent = fmtM(D.desiredMonthlyIncome);
+      $('s21-ss').textContent = fmtM(D.socialSecurity);
+      if (D.spouseSocialSecurity > 0) {
+        $('s21-spouse-row').style.display = 'flex';
+        $('s21-spouse-label').textContent = (D.spouseName || 'Spouse') + "'s Social Security";
+        $('s21-spouseSS').textContent = fmtM(D.spouseSocialSecurity);
+      }
+      if (D.pension > 0) {
+        $('s21-pension-row').style.display = 'flex';
+        $('s21-pension').textContent = fmtM(D.pension);
+      }
+      if (D.otherIncome > 0) {
+        $('s21-other-row').style.display = 'flex';
+        $('s21-other').textContent = fmtM(D.otherIncome);
+      }
+      $('s21-total').textContent = fmtM(totalGuaranteed);
+      $('s21-gap').textContent = fmtM(D.incomeGap);
+      $('s21-annual').textContent = fmt(D.incomeGap * 12);
+
+      // Reset to defaults first
+      $('s21-gap-box').className = 'highlight-box danger';
+      $('s21-gap-text').innerHTML = 'That\'s <strong>' + fmt(D.incomeGap * 12) + '</strong>/year that needs to come from your savings — <strong>every year, for as long as you live.</strong>';
+      $('s21-btn').textContent = 'How do we fill this gap?';
+
+      if (D.incomeGap === 0) {
+        // No gap today — show contingency scenario
+        $('s21-gap-box').className = 'highlight-box success';
+        $('s21-gap-text').innerHTML = 'Right now, your guaranteed income covers your expenses. But what happens if things change?';
+        $('s21-btn').textContent = 'Let\'s make sure it stays that way';
+
+        // Calculate reduced scenario: SS drops 30% or lose smaller SS check
+        const smallerSS = Math.min(D.socialSecurity, D.spouseSocialSecurity || D.socialSecurity);
+        const ssReduced = Math.round(totalGuaranteed - (smallerSS > 0 ? smallerSS : D.socialSecurity * 0.3));
+        const contingencyGap = Math.max(0, D.desiredMonthlyIncome - ssReduced);
+        D.contingencyGap = contingencyGap;
+
+        let contingencyHTML = '<div class="highlight-box danger">';
+        contingencyHTML += '<p style="text-align:center;font-size:0.9rem;color:var(--text-dim);margin-bottom:4px;">IF SOCIAL SECURITY DROPS 30% OR YOU LOSE A SPOUSE\'S BENEFIT</p>';
+        contingencyHTML += '<div class="summary-row"><span class="label">Reduced guaranteed income</span><span class="value" style="color:var(--danger);">' + fmtM(ssReduced) + '</span></div>';
+        contingencyHTML += '<div class="summary-row"><span class="label">Your desired income</span><span class="value">' + fmtM(D.desiredMonthlyIncome) + '</span></div>';
+        contingencyHTML += '<div class="big-number danger">' + fmtM(contingencyGap) + '</div>';
+        contingencyHTML += '<p style="text-align:center;font-size:0.95rem;">This is the gap you\'d face if life doesn\'t go perfectly.</p>';
+        contingencyHTML += '</div>';
+        $('s21-contingency').style.display = 'block';
+        $('s21-contingency').innerHTML = contingencyHTML;
+      } else {
+        $('s21-contingency').style.display = 'none';
+      }
+      break;
+    }
+
+    case 's22':
+      if (!D.spouseName) $('spouseAccountsArea').style.display = 'none';
+      else $('spouseAcctLabel').textContent = D.spouseName + "'s Retirement Accounts";
+      break;
+
+    case 's27': {
+      $('s27-total').textContent = fmt(D.totalPortfolio);
+      $('s27-annual-gap').textContent = fmt(D.incomeGap * 12) + '/year';
+      const safeWithdrawal = D.totalPortfolio * 0.025 / 12;
+      if (D.incomeGap === 0) {
+        $('s27-withdrawal-text').innerHTML = 'Your current guaranteed income covers your expenses. But your savings of <strong>' + fmt(D.totalPortfolio) + '</strong> are still at risk in the market — and adding a guaranteed income stream of <strong>' + fmtM(safeWithdrawal) + '+</strong> would lock in your lifestyle no matter what happens.';
+      } else {
+        $('s27-withdrawal-text').innerHTML = 'At the updated 2.5% withdrawal rate (the old 4% rule is now considered outdated by most economists), your savings could generate about <strong>' + fmtM(safeWithdrawal) + '</strong>.';
+      }
+      break;
+    }
+
+    case 's46': {
+      const suggested = Math.round(D.totalPortfolio * INCOME_BUCKET_RATIO);
+      $('s46-text').innerHTML = 'Based on your ' + fmt(D.totalPortfolio) + ' in total savings, I\'d recommend putting <strong>' + fmt(suggested) + '</strong> into the income bucket.';
+      $('incomeBucketAmount').value = suggested;
+      $('s46-remaining').textContent = 'That keeps ' + fmt(D.totalPortfolio - suggested) + ' liquid for emergencies, lifestyle, and legacy.';
+      break;
+    }
+
+    case 's49': {
+      const contribution = D.incomeBucketAmount;
+      const bonusAmt = contribution * BONUS_RATE;
+      const startIV = contribution + bonusAmt;
+      D.startingIV = startIV;
+
+      const years = D.yearsToIncome || 5;
+      let iv = startIV;
+      let tableHTML = '<div style="margin:16px 0;"><div class="summary-row"><span class="label">Year</span><span class="value">Income Value</span></div>';
+      for (let y = 1; y <= years; y++) {
+        iv = iv * (1 + GUARANTEED_GROWTH);
+        if (y === 1 || y === Math.round(years/2) || y === years) {
+          tableHTML += '<div class="summary-row"><span class="label">Year ' + y + '</span><span class="value">' + fmt(iv) + '</span></div>';
+        }
+      }
+      tableHTML += '</div>';
+
+      const monthlyIncome = Math.round(iv * PAYOUT_RATE / 12);
+      D.monthlyIncome = monthlyIncome;
+
+      $('s49-contribution').textContent = fmt(contribution);
+      $('s49-bonus').textContent = '+' + fmt(bonusAmt) + ' (' + (BONUS_RATE*100) + '% bonus)';
+      $('s49-startingIV').textContent = fmt(startIV);
+      $('s49-growth-table').innerHTML = tableHTML;
+      $('s49-income').textContent = fmtM(monthlyIncome);
+      $('s49-gap').textContent = fmtM(D.incomeGap);
+      $('s49-income2').textContent = fmtM(monthlyIncome);
+
+      if (D.incomeGap === 0) {
+        $('s49-gap').textContent = fmtM(D.contingencyGap || 0);
+        $('s49-verdict').innerHTML = '&#10003; You can add another <strong>guaranteed stream of income of ' + fmtM(monthlyIncome) + '</strong> to ensure your lifestyle is locked in.';
+        $('s49-verdict').style.color = 'var(--success)';
+      } else if (monthlyIncome >= D.incomeGap) {
+        $('s49-verdict').innerHTML = '&#10003; Your income gap is <strong>FILLED</strong>. And then some.';
+        $('s49-verdict').style.color = 'var(--success)';
+      } else {
+        $('s49-verdict').innerHTML = 'This covers ' + fmt(monthlyIncome) + ' of your ' + fmtM(D.incomeGap) + ' gap. We may want to adjust the allocation.';
+        $('s49-verdict').style.color = 'var(--gold)';
+      }
+      break;
+    }
+
+    case 's52':
+      $('s52-regular').textContent = fmtM(D.monthlyIncome);
+      $('s52-doubled').textContent = fmtM(D.monthlyIncome * 2);
+      break;
+
+    case 's53': {
+      // Stock portfolio growing at 7% for the same deferral period, then 2.5% withdrawal
+      const years = D.yearsToIncome || 5;
+      const stockGrowth = D.incomeBucketAmount * Math.pow(1.07, years);
+      const stockMonthlyIncome = Math.round(stockGrowth * 0.025 / 12);
+
+      $('s53-text').innerHTML = 'If you put ' + fmt(D.incomeBucketAmount) + ' in stocks growing at 7% for ' + years + ' years, it would grow to about ' + fmt(stockGrowth) + '. At a withdrawal rate of 2.5%, that gives you just <strong>' + fmtM(stockMonthlyIncome) + '</strong> per month vs <strong>' + fmtM(D.monthlyIncome) + '</strong> per month for the annuity.';
+      $('s53-stock-income').textContent = fmtM(stockMonthlyIncome);
+      $('s53-annuity-income').textContent = fmtM(D.monthlyIncome);
+      break;
+    }
+
+    case 's55': {
+      $('s55-heading').textContent = name + ', let\'s bring it all together.';
+      $('s55-text').innerHTML = 'You told me your biggest concern was <strong>"' + (D.biggestFear || 'running out of money') + '"</strong>.';
+      $('s55-text2').innerHTML = 'You\'ve now seen the numbers: <strong>' + fmtM(D.monthlyIncome) + '</strong> guaranteed for life, market protection, spouse coverage, and the healthcare doubler.';
+
+      const redX = '<span style="color:var(--danger);font-weight:700;flex-shrink:0;margin-top:2px;">&#10007;</span>';
+      const greenCheck = '<span class="check">&#10003;</span>';
+
+      let bullets = '<div class="highlight-box danger"><p style="font-weight:600;margin-bottom:12px;color:var(--danger);">Where you stand today:</p>';
+
+      // Worried about running out
+      if (D.worriedRunOut !== 'Not really') {
+        bullets += '<div class="checklist-item">' + redX + ' <strong style="color:var(--danger);">Worried about running out of money in retirement</strong></div>';
+      }
+      // No written plan
+      if (D.hasWrittenPlan !== 'Yes') {
+        bullets += '<div class="checklist-item">' + redX + ' <strong style="color:var(--danger);">DO NOT have a written decumulation plan</strong></div>';
+      }
+      // No market protection
+      if (D.canProtectGains !== 'Yes') {
+        bullets += '<div class="checklist-item">' + redX + ' <strong style="color:var(--danger);">DO NOT have protection against market drops</strong></div>';
+      }
+      // Not confident savings will last
+      if (D.confidentSavings !== 'Yes') {
+        bullets += '<div class="checklist-item">' + redX + ' <strong style="color:var(--danger);">DO NOT have confidence savings will last</strong></div>';
+      }
+      // Biggest fear
+      bullets += '<div class="checklist-item">' + redX + ' Biggest concern: <strong style="color:var(--danger);">' + (D.biggestFear || 'Running out of money') + '</strong></div>';
+      // Income gap
+      if (D.incomeGap > 0) {
+        bullets += '<div class="checklist-item">' + redX + ' Monthly income gap: <strong style="color:var(--danger);">' + fmtM(D.incomeGap) + '</strong></div>';
+      } else {
+        bullets += '<div class="checklist-item">' + redX + ' At risk if Social Security drops or a spouse\'s benefit is lost</div>';
+      }
+
+      bullets += '</div>';
+
+      // Now the green solution
+      bullets += '<div class="highlight-box success"><p style="font-weight:600;margin-bottom:12px;color:var(--success);">The solution:</p>';
+      bullets += '<div class="checklist-item">' + greenCheck + ' Ideal retirement: <strong>' + (D.idealRetirement || 'Travel, family, peace of mind') + '</strong></div>';
+      if (D.incomeGap > 0) {
+        bullets += '<div class="checklist-item">' + greenCheck + ' Guaranteed monthly income: <strong style="color:var(--success);">' + fmtM(D.monthlyIncome) + '</strong> for life</div>';
+      } else {
+        bullets += '<div class="checklist-item">' + greenCheck + ' Additional guaranteed income stream: <strong style="color:var(--success);">' + fmtM(D.monthlyIncome) + '</strong> to ensure your lifestyle is locked in</div>';
+      }
+      bullets += '<div class="checklist-item">' + greenCheck + ' Market protection — you never lose a penny</div>';
+      bullets += '<div class="checklist-item">' + greenCheck + ' Spouse coverage built in</div>';
+      bullets += '<div class="checklist-item">' + greenCheck + ' Healthcare income doubler at no extra cost</div>';
+      bullets += '<div class="checklist-item">' + greenCheck + ' Remaining money goes to your heirs</div>';
+      bullets += '</div>';
+
+      $('s55-summary').innerHTML = bullets;
+      break;
+    }
+
+    case 's56':
+      $('s56-heading').textContent = 'Great, ' + name + '. Let\'s lock in your lifestyle.';
+      break;
+
+    case 's58': {
+      const concern = (D.holdback || '').toLowerCase();
+      let response = '';
+      if (concern.includes('lock') || concern.includes('liquid') || concern.includes('access')) {
+        response = '<h2>About liquidity...</h2><p class="screen-text">You have <strong>10% penalty-free withdrawal every year</strong>. And once income starts, you won\'t want to touch the account value — because the income stream is far more valuable.</p><p class="screen-text">Compare that to the stock market\'s "surrender charge" when it drops 40%: <strong style="color:var(--danger);">40%</strong>. Which is really worse?</p>';
+      } else if (concern.includes('return') || concern.includes('gain') || concern.includes('market') || concern.includes('performance')) {
+        response = '<h2>About returns...</h2><p class="screen-text">BlackRock ($20 trillion under management), Ernst & Young, and Yale all show portfolios with annuities <strong>outperform</strong> standard portfolios in retirement.</p><p class="screen-text">Real market compound returns over 25 years: <strong>4.6%</strong>. The guaranteed growth rate here is <strong>7%</strong>. Which would you rather count on?</p>';
+      } else if (concern.includes('kid') || concern.includes('legacy') || concern.includes('heir') || concern.includes('children')) {
+        response = '<h2>About your legacy...</h2><p class="screen-text">Remember — any money left in the account when you pass goes directly to your heirs. Plus, because this contract generates so much more income, you <strong>don\'t have to pull from your other accounts</strong>. Those accounts stay intact and become additional legacy money.</p>';
+      } else if (concern.includes('spouse') || concern.includes('wife') || concern.includes('husband') || concern.includes('partner')) {
+        response = '<h2>About involving your spouse...</h2><p class="screen-text">Absolutely — this decision should be made together. You can start the application now and review everything together before finalizing. Or we can schedule a call where we walk through the numbers with both of you.</p>';
+      } else {
+        response = '<h2>I hear you, ' + name + '.</h2><p class="screen-text">That\'s a fair concern. Here\'s what I know: your income gap of <strong>' + fmtM(D.incomeGap) + '</strong> is real. And every independent researcher — Nobel economists, BlackRock, Yale — agrees this strategy improves retirement outcomes.</p><p class="screen-text">A retirement income specialist can address your specific concern directly. Want to move forward with the application, or schedule a call to talk it through?</p>';
+      }
+      $('s58-content').innerHTML = response;
+      break;
+    }
+
+    case 's59':
+      $('s59-heading').textContent = 'I appreciate your honesty, ' + name + '.';
+      $('s59-text').innerHTML = 'This isn\'t for everyone. But your income gap of <strong>' + fmtM(D.incomeGap) + '</strong> is real.';
+      break;
+
+    case 's59b':
+      $('cb-gap') && ($('cb-gap').textContent = fmtM(D.incomeGap));
+      break;
+
+    case 's61':
+      // Pre-fill from earlier data
+      if ($('appFirstName') && !$('appFirstName').value) $('appFirstName').value = D.firstName;
+      break;
+
+    case 's62':
+      if (D.spouseName) {
+        $('s62-heading').textContent = D.spouseName + "'s Information";
+        if ($('appSpouseFirst') && !$('appSpouseFirst').value) $('appSpouseFirst').value = D.spouseName;
+      }
+      break;
+
+    case 's66':
+      buildReviewSummary();
+      $('s66-income').textContent = fmtM(D.monthlyIncome);
+      break;
+
+    case 's67':
+      $('s67-heading').textContent = 'You just locked in your lifestyle, ' + name + '.';
+      break;
+
+    case 'callback-confirm':
+      $('cb-gap').textContent = fmtM(D.incomeGap);
+      break;
+  }
+}
+
+// ============================================
+// SAVE FUNCTIONS
+// ============================================
+function saveBasicInfo() {
+  D.firstName = gv('firstName') || 'Friend';
+  D.spouseName = gv('spouseName');
+  D.age = numVal('age');
+  D.spouseAge = numVal('spouseAge');
+  D.yearsToIncome = numVal('yearsToIncome') || 5;
+  if (!D.age || D.age < 40) { alert('Please enter your age (40+).'); return; }
+  goTo('s04');
+}
+
+function saveSocialSecurity() {
+  D.socialSecurity = numVal('socialSecurity') || 2500;
+  D.spouseSocialSecurity = numVal('spouseSocialSecurity') || 0;
+  goTo('s16');
+}
+
+function showPensionInput() {
+  $('pensionInputArea').style.display = 'block';
+}
+
+function showOtherIncomeInput() {
+  $('otherIncomeInputArea').style.display = 'block';
+}
+
+function saveDesiredIncome() {
+  D.desiredMonthlyIncome = numVal('desiredMonthlyIncome');
+  if (!D.desiredMonthlyIncome) { alert('Please enter your desired monthly income.'); return; }
+  const totalGuaranteed = D.socialSecurity + D.spouseSocialSecurity + D.pension + D.otherIncome;
+  D.incomeGap = Math.max(0, D.desiredMonthlyIncome - totalGuaranteed);
+  D.totalGuaranteedMonthly = totalGuaranteed;
+  goTo('s21');
+}
+
+function saveAccounts() {
+  D.iraBalance = numVal('iraBalance');
+  D.rothIraBalance = numVal('rothIraBalance');
+  D.fourOhOneKBalance = numVal('fourOhOneKBalance');
+  D.roth401kBalance = numVal('roth401kBalance');
+  D.spouseRetirementBalance = numVal('spouseRetirementBalance');
+  D.brokerageBalance = numVal('brokerageBalance');
+  D.savingsBalance = numVal('savingsBalance');
+  D.taxableTotal = D.iraBalance + D.fourOhOneKBalance;
+  D.taxFreeTotal = D.rothIraBalance + D.roth401kBalance;
+  D.totalPortfolio = D.iraBalance + D.rothIraBalance + D.fourOhOneKBalance + D.roth401kBalance + D.spouseRetirementBalance + D.brokerageBalance + D.savingsBalance;
+  if (!D.totalPortfolio) { alert('Please enter at least one account balance.'); return; }
+  goTo('s27');
+}
+
+function saveIncomeBucket() {
+  D.incomeBucketAmount = numVal('incomeBucketAmount');
+  if (!D.incomeBucketAmount || D.incomeBucketAmount > D.totalPortfolio) {
+    alert('Please enter a valid amount (up to ' + fmt(D.totalPortfolio) + ').');
+    return;
+  }
+  goTo('s49');
+}
+
+// ============================================
+// APPLICATION FUNCTIONS
+// ============================================
+function addAccountEntry() {
+  const container = $('accountEntries');
+  const entry = document.createElement('div');
+  entry.className = 'account-entry';
+  entry.innerHTML = `
+    <div class="input-group">
+      <label>Current Company / Custodian</label>
+      <input type="text" class="acctCompany" placeholder="e.g. Fidelity, Schwab, Edward Jones">
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Account Type</label>
+        <select class="acctType">
+          <option value="">Select...</option>
+          <option>Traditional IRA</option><option>Roth IRA</option>
+          <option>401(k)</option><option>403(b)</option>
+          <option>Brokerage</option><option>Annuity</option><option>Other</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Approximate Balance</label>
+        <div class="dollar-input">
+          <input type="text" inputmode="numeric" class="acctBalance" placeholder="0">
+        </div>
+      </div>
+    </div>
+`;
+  container.appendChild(entry);
+}
+
+function buildReviewSummary() {
+  let html = '';
+  html += '<div class="form-section"><h3>Personal Information</h3>';
+  html += '<div class="summary-row"><span class="label">Name</span><span class="value">' + gv('appFirstName') + ' ' + gv('appLastName') + '</span></div>';
+  html += '<div class="summary-row"><span class="label">DOB</span><span class="value">' + gv('appDOB') + '</span></div>';
+  html += '<div class="summary-row"><span class="label">Address</span><span class="value">' + gv('appAddress') + ', ' + gv('appCity') + ' ' + gv('appState') + ' ' + gv('appZip') + '</span></div>';
+  html += '<div class="summary-row"><span class="label">Phone</span><span class="value">' + gv('appPhone') + '</span></div>';
+  html += '<div class="summary-row"><span class="label">Email</span><span class="value">' + gv('appEmail') + '</span></div>';
+  html += '</div>';
+
+  if (D.spouseName) {
+    html += '<div class="form-section"><h3>Spouse</h3>';
+    html += '<div class="summary-row"><span class="label">Name</span><span class="value">' + gv('appSpouseFirst') + ' ' + gv('appSpouseLast') + '</span></div>';
+    html += '<div class="summary-row"><span class="label">DOB</span><span class="value">' + gv('appSpouseDOB') + '</span></div>';
+    html += '</div>';
+  }
+
+  html += '<div class="form-section"><h3>Income Plan</h3>';
+  html += '<div class="summary-row"><span class="label">Income Bucket</span><span class="value">' + fmt(D.incomeBucketAmount) + '</span></div>';
+  html += '<div class="summary-row"><span class="label">Income Gap</span><span class="value">' + fmtM(D.incomeGap) + '</span></div>';
+  html += '<div class="summary-row"><span class="label">Guaranteed Income</span><span class="value" style="color:var(--success);">' + fmtM(D.monthlyIncome) + '</span></div>';
+  html += '</div>';
+
+  $('s66-summary').innerHTML = html;
+}
+
+function collectAllData() {
+  const accounts = [];
+  document.querySelectorAll('.account-entry').forEach(entry => {
+    accounts.push({
+      company: entry.querySelector('.acctCompany')?.value || '',
+      type: entry.querySelector('.acctType')?.value || '',
+      balance: entry.querySelector('.acctBalance')?.value || '',
+      number: entry.querySelector('.acctNumber')?.value || ''
+    });
+  });
+
+  return {
+    timestamp: new Date().toISOString(),
+    prospect: {
+      firstName: D.firstName, spouseName: D.spouseName,
+      age: D.age, spouseAge: D.spouseAge
+    },
+    motivation: {
+      idealRetirement: D.idealRetirement,
+      obstacles: D.obstacles,
+      biggestFear: D.biggestFear,
+      meaningIfSolved: D.meaningIfSolved
+    },
+    financials: {
+      yearsToIncome: D.yearsToIncome,
+      socialSecurity: D.socialSecurity,
+      spouseSocialSecurity: D.spouseSocialSecurity,
+      pension: D.pension,
+      otherIncome: D.otherIncome,
+      monthlyExpenses: D.monthlyExpenses,
+      desiredMonthlyIncome: D.desiredMonthlyIncome,
+      incomeGap: D.incomeGap,
+      totalPortfolio: D.totalPortfolio,
+      incomeBucketAmount: D.incomeBucketAmount,
+      projectedMonthlyIncome: D.monthlyIncome
+    },
+    preferences: {
+      riskTolerance: D.riskTolerance,
+      readyScale: D.readyScale
+    },
+    application: {
+      primary: {
+        firstName: gv('appFirstName'), lastName: gv('appLastName'),
+        dob: gv('appDOB'), ssn: gv('appSSN'),
+        address: gv('appAddress'), city: gv('appCity'),
+        state: gv('appState'), zip: gv('appZip'),
+        phone: gv('appPhone'), email: gv('appEmail')
+      },
+      spouse: D.spouseName ? {
+        firstName: gv('appSpouseFirst'), lastName: gv('appSpouseLast'),
+        dob: gv('appSpouseDOB'), ssn: gv('appSpouseSSN')
+      } : null,
+      accounts: accounts,
+      suitability: {
+        income: gv('suitIncome'), netWorth: gv('suitNetWorth'),
+        liquidNetWorth: gv('suitLiquid'), objective: gv('suitObjective')
+      }
+    }
+  };
+}
+
+async function submitApplication() {
+  const data = collectAllData();
+  // Save to Supabase
+  await saveToSupabase('application', data);
+  // Keep localStorage as backup
+  localStorage.setItem('annuity_application_' + Date.now(), JSON.stringify(data));
+  console.log('APPLICATION SUBMITTED:', JSON.stringify(data, null, 2));
+  goTo('s67');
+}
+
+async function submitCallback() {
+  const data = {
+    ...collectAllData(),
+    callbackPhone: gv('callbackPhone'),
+    callbackEmail: gv('callbackEmail'),
+    callbackTime: gv('callbackTime')
+  };
+  await saveToSupabase('callback', data);
+  localStorage.setItem('annuity_callback_' + Date.now(), JSON.stringify(data));
+  console.log('CALLBACK REQUEST:', JSON.stringify(data, null, 2));
+  goTo('callback-confirm');
+}
+
+async function submitExitEmail() {
+  const email = gv('exitEmail') || gv('resourceEmail');
+  if (email) {
+    const data = { email, firstName: D.firstName, timestamp: new Date().toISOString() };
+    await saveToSupabase('lead', data);
+    localStorage.setItem('annuity_lead_' + Date.now(), JSON.stringify(data));
+    console.log('LEAD CAPTURED:', email);
+    alert('Thanks! Check your email for the retirement research guide.');
+  }
+}
+
+// ============================================
+// INIT
+// ============================================
+updateProgress();
+
+// Add back buttons to all screens that don't have one
+const noBackScreens = ['s01', 's67', 'callback-confirm', 'exit-early', 'exit-resources'];
+document.querySelectorAll('.screen').forEach(screen => {
+  if (noBackScreens.includes(screen.id)) return;
+  if (screen.querySelector('[onclick*="goBack"]')) return;
+  const backDiv = document.createElement('div');
+  backDiv.className = 'btn-group';
+  backDiv.style.paddingTop = '0';
+  backDiv.innerHTML = '<button class="btn btn-secondary" onclick="goBack()" style="border:none;font-size:0.9rem;">&#8592; Back</button>';
+  screen.appendChild(backDiv);
+});
+</script>
+
+</body>
+</html>
